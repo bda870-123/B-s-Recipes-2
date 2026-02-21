@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>B's Recipes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{
+font-family:Arial,sans-serif;
+margin:0;
+background:#2F1F14;
+color:#F5F0E1;
+}
+
+header{
+background:#E9D8C4;
+color:#362B24;
+padding:20px;
+text-align:center;
+font-size:26px;
+font-weight:bold;
+letter-spacing:1px;
+}
+
+.container{
+padding:15px;
+max-width:1000px;
+margin:auto;
+}
+
+.card{
+background:#7F6755;
+padding:15px;
+border-radius:12px;
+margin-bottom:15px;
+box-shadow:0 4px 8px rgba(0,0,0,.4);
+transition:.25s;
+animation:fadeIn .4s ease;
+}
+.card:hover{
+transform:translateY(-4px);
+box-shadow:0 12px 22px rgba(0,0,0,.5);
+}
+
+@keyframes fadeIn{
+from{opacity:0;transform:translateY(10px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+input,textarea,select{
+width:100%;
+padding:12px;
+margin:12px 0;
+background:#362B24;
+color:#F5F0E1;
+border:2px solid #EEDEC5;
+border-radius:8px;
+box-sizing:border-box;
+}
+
+button{
+background:#F5F0E1;
+color:#362B24;
+border:2px solid #EEDEC5;
+padding:6px 12px;
+margin:4px;
+cursor:pointer;
+border-radius:8px;
+font-weight:bold;
+transition:.2s;
+}
+button:hover{
+background:#E9D8C4;
+transform:translateY(-2px);
+}
+
+.filter-bar button.active{
+background:#362B24;
+color:#F5F0E1;
+}
+
+.recipe-title{
+font-size:22px;
+font-weight:bold;
+}
+
+.category-label{
+display:inline-block;
+background:#362B24;
+padding:3px 7px;
+border-radius:5px;
+margin-left:6px;
+font-size:12px;
+cursor:pointer;
+}
+
+.star{
+cursor:pointer;
+font-size:18px;
+margin-left:8px;
+transition:transform .25s;
+}
+.star.pop{
+transform:scale(1.4);
+}
+
+.recipe-banner{
+background-size:cover;
+background-position:center;
+height:180px;
+border-radius:10px;
+margin:10px 0;
+display:flex;
+align-items:center;
+justify-content:center;
+color:#fff;
+font-weight:bold;
+font-size:18px;
+background-color:rgba(0,0,0,.35);
+background-blend-mode:overlay;
+cursor:pointer;
+transition:.3s;
+}
+.recipe-banner:hover{
+filter:brightness(1.1);
+}
+
+.recipe-content{
+overflow:hidden;
+height:0;
+transition:height .35s ease;
+}
+
+.recipe-inner-box{
+background:#362B24;
+border:2px solid #EEDEC5;
+border-radius:8px;
+padding:15px;
+margin-top:12px;
+}
+
+.divider{
+height:6px; /* thicker divider */
+background:#EEDEC5;
+opacity:.7;
+margin:22px 0;
+border-radius:4px;
+}
+
+/* PERFECT INGREDIENT ALIGNMENT */
+.ingredient-row{
+display:flex;
+align-items:center;
+gap:10px;
+margin:6px 0;
+}
+
+.ingredient-row input{
+width:18px;
+height:18px;
+margin:0;
+flex-shrink:0;
+accent-color:#EEDEC5;
+cursor:pointer;
+}
+
+.ingredient-row span{
+line-height:1.4;
+}
+
+.ingredient-row input:checked + span{
+text-decoration:line-through;
+opacity:.6;
+}
+
+.meta{
+font-size:13px;
+opacity:.8;
+margin-top:4px;
+}
+
+#toast{
+position:fixed;
+bottom:20px;
+right:20px;
+background:#E9D8C4;
+color:#362B24;
+padding:10px 16px;
+border-radius:8px;
+opacity:0;
+transition:.3s;
+}
+#toast.show{opacity:1;}
+
+.modal{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.6);
+display:none;
+align-items:center;
+justify-content:center;
+}
+.modal-box{
+background:#7F6755;
+padding:20px;
+border-radius:12px;
+text-align:center;
+width:280px;
+}
+
+.dragging{opacity:.5;}
+.filter-bar{text-align:center;margin-bottom:10px;}
+
+.meta button.active-scale{
+background:#362B24;
+color:#F5F0E1;
+}
+
+/* your existing css above */
+
+.recipe-details {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+
+details.style.maxHeight = details.scrollHeight + "px";
+
+</style>
+</head>
+
+<body>
+
+<header>B's Recipes</header>
+
+<div class="container">
+
+<div class="card">
+<h3>Add Recipe</h3>
+<input type="hidden" id="editIndex">
+<input id="title" placeholder="Recipe Title">
+<input id="imageUrl" placeholder="Image URL (optional)">
+<input type="file" id="imageUpload" accept="image/*">
+<input id="servings" type="number" placeholder="Servings">
+<input id="prepTime" type="number" placeholder="Prep Time (minutes)">
+<input id="cookTime" type="number" placeholder="Cook Time (minutes)">
+<select id="category">
+<option value="">Category</option>
+<option>Breakfast</option>
+<option>Lunch</option>
+<option>Dinner</option>
+<option>Dessert</option>
+<option>Snack</option>
+<option>Sauce/Dip</option>
+</select>
+<textarea id="ingredients" placeholder="Ingredients (one per line)"></textarea>
+<textarea id="instructions" placeholder="Instructions"></textarea>
+<button onclick="saveRecipe()">Save Recipe</button>
+</div>
+
+<div class="card filter-bar">
+<input id="searchInput" placeholder="Search recipes...">
+<select id="sortSelect" onchange="displayRecipes()">
+<option value="newest">Newest</option>
+<option value="az">A-Z</option>
+<option value="favorites">Favorites</option>
+</select>
+<br>
+<button onclick="setFilter('')">All</button>
+<button onclick="setFilter('Breakfast')">Breakfast</button>
+<button onclick="setFilter('Lunch')">Lunch</button>
+<button onclick="setFilter('Dinner')">Dinner</button>
+<button onclick="setFilter('Dessert')">Dessert</button>
+<button onclick="setFilter('Snack')">Snack</button>
+<button onclick="setFilter('Sauce/Dip')">Sauce/Dip</button>
+</div>
+
+<div id="recipeContainer"></div>
+</div>
+
+<div id="toast"></div>
+
+<div class="modal" id="deleteModal">
+<div class="modal-box">
+<p>Delete this recipe?</p>
+<button onclick="confirmDelete()">Yes</button>
+<button onclick="closeModal()">Cancel</button>
+</div>
+</div>
+
+<script>
+let currentFilter="";
+let deleteIndex=null;
+const qs=id=>document.getElementById(id);
+
+function loadRecipes(){
+return JSON.parse(localStorage.getItem("recipes")||"[]");
+}
+
+function saveRecipes(data){
+localStorage.setItem("recipes",JSON.stringify(data));
+}
+
+function showToast(msg){
+const t=qs("toast");
+t.textContent=msg;
+t.classList.add("show");
+setTimeout(()=>t.classList.remove("show"),2000);
+}
+
+qs("imageUpload").addEventListener("change",function(){
+const file=this.files[0];
+if(!file) return;
+const reader=new FileReader();
+reader.onload=e=>qs("imageUrl").value=e.target.result;
+reader.readAsDataURL(file);
+});
+
+function saveRecipe(){
+const data=loadRecipes();
+const index=qs("editIndex").value;
+const recipe={
+title:qs("title").value,
+image:qs("imageUrl").value,
+servings:parseFloat(qs("servings").value)||1,
+prepTime:parseInt(qs("prepTime").value)||0,
+cookTime:parseInt(qs("cookTime").value)||0,
+category:qs("category").value,
+ingredients:qs("ingredients").value,
+instructions:qs("instructions").value,
+favorite:false,
+created:Date.now()
+};
+
+
+if(index==="") data.push(recipe);
+else recipe.favorite=data[index].favorite, recipe.created=data[index].created, data[index]=recipe;
+
+saveRecipes(data);
+document.querySelectorAll("input,textarea,select").forEach(el=>el.value="");
+qs("editIndex").value="";
+showToast("Saved ✓");
+displayRecipes();
+}
+
+function displayRecipes(){
+const container=qs("recipeContainer");
+container.innerHTML="";
+let data=loadRecipes();
+
+const search=qs("searchInput").value.toLowerCase();
+const sort=qs("sortSelect").value;
+
+data=data.filter(r=>{
+return (!currentFilter||r.category===currentFilter)
+&& (r.title.toLowerCase().includes(search)
+|| r.ingredients.toLowerCase().includes(search));
+});
+
+if(sort==="az") data.sort((a,b)=>a.title.localeCompare(b.title));
+if(sort==="favorites") data=data.filter(r=>r.favorite);
+if(sort==="newest") data.sort((a,b)=>b.created-a.created);
+
+data.forEach((r,i)=>{
+const div=document.createElement("div");
+div.className="card";
+
+div.innerHTML=`
+<div class="recipe-title">
+${r.title}
+<span class="star" onclick="toggleFavorite(${i},this)">${r.favorite?"⭐":"☆"}</span>
+${r.category?`<span class="category-label" onclick="setFilter('${r.category}')">${r.category}</span>`:""}
+<div class="meta">
+Serves <span id="servings-${i}">${r.servings}</span>
+${r.prepTime?` • ${r.prepTime} min prep`:""}
+${r.cookTime?` • ${r.cookTime} min cook`:""}
+<br>
+Scale:
+<button id="scale-${i}-1" onclick="scaleRecipe(${i},1)">1x</button>
+<button id="scale-${i}-2" onclick="scaleRecipe(${i},2)">2x</button>
+<button id="scale-${i}-3" onclick="scaleRecipe(${i},3)">3x</button>
+</div></div>
+
+
+<div class="recipe-banner"
+style="background-image:url('${r.image||""}')"
+onclick="toggleRecipe(this)">
+View Recipe
+</div>
+
+<div class="recipe-content">
+<div class="recipe-inner-box">
+<p><b>Ingredients:</b></p>
+<div id="ingredients-${i}">
+${r.ingredients.split("\n")
+.filter(ing=>ing.trim()!=="")
+.map(ing=>`
+<label class="ingredient-row">
+<input type="checkbox">
+<span>${ing}</span>
+</label>
+`).join("")}
+</div>
+
+<div class="divider"></div>
+<p><b>Instructions:</b><br>${r.instructions.replace(/\n/g,"<br>")}</p>
+</div>
+<div style="margin-top:12px;">
+<button onclick="editRecipe(${i})">Edit</button>
+<button onclick="openDelete(${i})">Delete</button>
+</div>
+</div>
+`;
+
+container.appendChild(div);
+});
+
+highlightActiveFilter();
+}
+
+function toggleRecipe(banner){
+const content=banner.nextElementSibling;
+content.style.height=content.style.height && content.style.height!=="0px"
+? "0"
+: content.scrollHeight+"px";
+}
+
+function toggleFavorite(i,el){
+const data=loadRecipes();
+data[i].favorite=!data[i].favorite;
+saveRecipes(data);
+el.classList.add("pop");
+setTimeout(()=>el.classList.remove("pop"),200);
+displayRecipes();
+}
+
+function editRecipe(i){
+const r=loadRecipes()[i];
+qs("title").value=r.title;
+qs("imageUrl").value=r.image;
+qs("servings").value=r.servings;
+qs("prepTime").value=r.prepTime||"";
+qs("cookTime").value=r.cookTime||"";
+qs("category").value=r.category;
+qs("ingredients").value=r.ingredients;
+qs("instructions").value=r.instructions;
+qs("editIndex").value=i;
+window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function openDelete(i){
+deleteIndex=i;
+qs("deleteModal").style.display="flex";
+}
+
+function closeModal(){
+qs("deleteModal").style.display="none";
+}
+
+function confirmDelete(){
+const data=loadRecipes();
+data.splice(deleteIndex,1);
+saveRecipes(data);
+closeModal();
+showToast("Deleted");
+displayRecipes();
+}
+
+function setFilter(cat){
+currentFilter=cat;
+displayRecipes();
+}
+
+function highlightActiveFilter(){
+document.querySelectorAll(".filter-bar button").forEach(btn=>{
+btn.classList.remove("active");
+if(btn.textContent===currentFilter || (currentFilter==="" && btn.textContent==="All")){
+btn.classList.add("active");
+}
+});
+}
+
+function scaleRecipe(index,multiplier){
+const data=loadRecipes();
+const recipe=data[index];
+
+const container=document.getElementById(`ingredients-${index}`);
+const servingsDisplay=document.getElementById(`servings-${index}`);
+
+const baseServings=recipe.servings;
+const newServings=Math.round(baseServings*multiplier*100)/100;
+servingsDisplay.textContent=newServings;
+
+/* Highlight active button */
+[1,2,3].forEach(num=>{
+document
+.getElementById(`scale-${index}-${num}`)
+.classList.remove("active-scale");
+});
+
+document
+.getElementById(`scale-${index}-${multiplier}`)
+.classList.add("active-scale");
+
+/* Re-render ingredients */
+const lines=recipe.ingredients.split("\n");
+
+container.innerHTML=lines
+.filter(ing=>ing.trim()!=="")
+.map(line=>{
+
+let scaled=line;
+
+const match=line.match(/^(\d+(\.\d+)?|\d+\/\d+)/);
+
+if(match){
+let value=match[0];
+
+let numeric;
+if(value.includes("/")){
+let parts=value.split("/");
+numeric=parseFloat(parts[0])/parseFloat(parts[1]);
+}else{
+numeric=parseFloat(value);
+}
+
+let newValue=numeric*multiplier;
+newValue=Math.round(newValue*100)/100;
+
+scaled=line.replace(value,newValue);
+}
+
+return `
+<label class="ingredient-row">
+<input type="checkbox">
+<span>${scaled}</span>
+</label>
+`;
+}).join("");
+}
+
+qs("searchInput").addEventListener("input",displayRecipes);
+
+
+displayRecipes();
+</script>
+
+</body>
+</html>
+
