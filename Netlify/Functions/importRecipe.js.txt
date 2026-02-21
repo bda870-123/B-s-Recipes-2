@@ -1,0 +1,105 @@
+const fetch = require("node-fetch");
+const cheerio = require("cheerio");
+
+exports.handler = async (event) => {
+  try {
+    const { url } = JSON.parse(event.body);
+
+    if (!url) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "No URL provided" }),
+      };
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
+    });
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    let recipe = null;
+
+    // 1️⃣ Try JSON-LD structured data (best method)
+    $('script[type="application/ld+json"]').each((i, el) => {
+      try {
+        const json = JSON.parse($(el).contents().text());
+
+        const findRecipe = (obj) => {
+          if (!obj) return null;
+          if (Array.isArray(obj)) {
+            return obj.find((x) => x["@type"] === "Recipe");
+          }
+          if (obj["@type"] === "Recipe") return obj;
+          return null;
+        };
+
+        const found = findRecipe(json);
+        if (found) recipe = found;
+      } catch (e) {}
+    });
+
+    // 2️⃣ Fallback scraping if JSON-LD not found
+    if (!recipe) {
+      const title = $("h1").first().text();
+
+      const ingredients = [];
+      $("li").each((i, el) => {
+        const text = $(el).text().trim();
+        if (text.match(/\d/) && text.length < 200) {
+          ingredients.push(text);
+        }
+      });
+
+      const instructions = [];
+      $("p").each((i, el) => {
+        const text = $(el).text().trim();
+        if (text.length > 80) {
+          instructions.push(text);
+        }
+      });
+
+      recipe = {
+        name: title,
+        recipeIngredient: ingredients,
+        recipeInstructions: instructions,
+      };
+    }
+
+    let instructions = [];
+
+    if (Array.isArray(recipe.recipeInstructions)) {
+      instructions = recipe.recipeInstructions.map((step) =>
+        typeof step === "string" ? step : step.text
+      );
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        title: recipe.name || "",
+        image: Array.isArray(recipe.image)
+          ? recipe.image[0]
+          : recipe.image || "",
+        ingredients: (recipe.recipeIngredient || []).join("\n"),
+        instructions: instructions.join("\n"),
+        servings:
+          recipe.recipeYield &&
+          recipe.recipeYield.toString().match(/\d+/)
+            ? recipe.recipeYield.toString().match(/\d+/)[0]
+            : "",
+        prepTime: recipe.prepTime || "",
+        cookTime: recipe.cookTime || "",
+      }),
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Scrape failed" }),
+    };
+  }
+};
