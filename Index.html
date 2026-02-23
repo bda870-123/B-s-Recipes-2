@@ -237,7 +237,6 @@ details.style.maxHeight = details.scrollHeight + "px";
 
 <div class="card">
 <h3>Add Recipe</h3>
-<button onclick="openImportModal()">Import Recipe</button>
 <input type="hidden" id="editIndex">
 <input id="title" placeholder="Recipe Title">
 <input id="imageUrl" placeholder="Image URL (optional)">
@@ -280,15 +279,6 @@ details.style.maxHeight = details.scrollHeight + "px";
 </div>
 
 <div id="toast"></div>
-
-<div class="modal" id="importModal">
-  <div class="modal-box">
-    <h3>Import Recipe</h3>
-    <input id="importUrl" placeholder="Paste recipe link here">
-    <button onclick="importRecipe()">Import</button>
-    <button onclick="closeImportModal()">Cancel</button>
-  </div>
-</div>
 
 <div class="modal" id="deleteModal">
 <div class="modal-box">
@@ -549,58 +539,7 @@ return `
 }).join("");
 }
 
-
-/////////
-
-function openImportModal(){
-  qs("importModal").style.display="flex";
-}
-
-function closeImportModal(){
-  qs("importModal").style.display="none";
-}
-
-async function importRecipe() {
-  const urlInput = qs("importUrl").value;
-
-  try {
-    const res = await fetch("/.netlify/functions/importRecipe", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ url: urlInput })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      showToast("Import failed");
-      return;
-    }
-
-    // Fill form fields
-    qs("title").value = data.title || "";
-    qs("imageUrl").value = data.image || "";
-    qs("ingredients").value = data.ingredients || "";
-    qs("instructions").value = data.instructions || "";
-    qs("servings").value = data.servings || "";
-    qs("prepTime").value = data.prepTime || "";
-    qs("cookTime").value = data.cookTime || "";
-
-    closeImportModal();
-    showToast("Imported ✓ Review & Save");
-
-  } catch (err) {
-    console.error(err);
-    showToast("Import failed");
-  }
-}
-
-////////////////////////
-
 qs("searchInput").addEventListener("input",displayRecipes);
-
 
 
 displayRecipes();
