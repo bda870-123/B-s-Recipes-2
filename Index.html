@@ -560,32 +560,30 @@ function closeImportModal(){
   qs("importModal").style.display="none";
 }
 
-async function importRecipe(){
-  const url = qs("importUrl").value.trim();
-  if(!url){
-    showToast("Paste a link first");
-    return;
-  }
+async function importRecipe() {
+  const urlInput = qs("importUrl").value;
 
-  showToast("Importing...");
-
-  try{
-    const res = await fetch("/.netlify/functions/importRecipe",{
-      method:"POST",
-      body: JSON.stringify({url})
+  try {
+    const res = await fetch("/.netlify/functions/importRecipe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url: urlInput })
     });
 
     const data = await res.json();
 
-    if(data.error){
+    if (!res.ok || data.error) {
       showToast("Import failed");
       return;
     }
 
-    qs("title").value = data.title;
-    qs("imageUrl").value = data.image;
-    qs("ingredients").value = data.ingredients;
-    qs("instructions").value = data.instructions;
+    // Fill form fields
+    qs("title").value = data.title || "";
+    qs("imageUrl").value = data.image || "";
+    qs("ingredients").value = data.ingredients || "";
+    qs("instructions").value = data.instructions || "";
     qs("servings").value = data.servings || "";
     qs("prepTime").value = data.prepTime || "";
     qs("cookTime").value = data.cookTime || "";
@@ -593,7 +591,8 @@ async function importRecipe(){
     closeImportModal();
     showToast("Imported ✓ Review & Save");
 
-  }catch(e){
+  } catch (err) {
+    console.error(err);
     showToast("Import failed");
   }
 }
